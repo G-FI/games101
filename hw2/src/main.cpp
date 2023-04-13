@@ -37,7 +37,7 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     float width = height * aspect_ratio;
     float r = width / 2, l = -r;
     float t = height / 2, b = -t;
-    float n = zNear, f = zFar;
+    float n = -zNear, f = -zFar;
     
     Eigen::Matrix4f m_orth = Eigen::Matrix4f::Identity();
     m_orth<< 2 / (r-l), 0, 0, -(r+l)/(r-l),

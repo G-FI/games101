@@ -92,7 +92,9 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
         {
             vert.x() = 0.5*width*(vert.x()+1.0);
             vert.y() = 0.5*height*(vert.y()+1.0);
-            vert.z() = vert.z() * f1 + f2;
+            //vert.z() = vert.z() * f1 + f2;
+            vert.z() = -vert.z() * f1 + f2;
+
         }
 
         for (int i = 0; i < 3; ++i)
@@ -250,11 +252,16 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
                     for(int j = 0; j < freq; ++j){
                         float sy = start_y + j * dt;
                         if(insideTriangle(sx, sy, t.v)){
-                            auto[alpha, beta, gamma] = computeBarycentric2D(sx, sy, t.v);
-                            float z_interpolated =  alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-                            auto ind = (height-1-y)*width + x; //同一个像素中的采样点，深度值对应的深度缓冲中的位置应该是一样的
-                            if(z_interpolated <= depth_buf[ind] + EPSILON){
-                                depth_buf[ind] = z_interpolated;
+                            //1.计算重心坐标
+                            auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
+                            //2.投影矫正，
+                            float Z = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                            alpha *= Z / v[0].w(); beta *= Z/v[1].w(); gamma *= Z / v[2].w();
+                            float zp = alpha * v[0].z() + beta * v[1].z() + gamma * v[2].z();
+                
+                            auto ind = get_index(x, y); //同一个像素中的采样点，深度值对应的深度缓冲中的位置应该是一样的
+                            if(zp <= depth_buf[ind] + EPSILON){
+                                depth_buf[ind] = zp;
                                 is_view = true;
                                 color += t.getColor();
                             }
@@ -270,16 +277,14 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
             else if(insideTriangle(x+0.5, y+0.5, t.v)){
                 //1.计算重心坐标
                 auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-                //2.插值深度, 其次坐标中的深度，没有除w之前的状态
-                //应该是对齐次坐标中的w和z分别插值，再计算出深度z，或者直接先计算出三角形三个顶点的深度(除以w)，之后再插值一次就行
-                //float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-                //float z_interpolated = alpha * v[0].z() + beta * v[1].z() + gamma * v[2].z(); 
-                //z_interpolated *= w_reciprocal; 
-                float z_interpolated =  alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                //2.投影矫正，
+                float Z = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                alpha *= Z / v[0].w(); beta *= Z/v[1].w(); gamma *= Z / v[2].w();
+                float zp = alpha * v[0].z() + beta * v[1].z() + gamma * v[2].z();
                 //从相机可见
-                auto ind = (height-1-y)*width + x;
-                if(z_interpolated <= depth_buf[ind] + EPSILON){
-                    depth_buf[ind] = z_interpolated;
+                auto ind = get_index(x, y);
+                if(zp <= depth_buf[ind] + EPSILON){
+                    depth_buf[ind] = zp;
                     auto color = t.getColor(); //本应该获取三角形的各个顶点颜色然后插值计算出来，但是每个三角形只有一个颜色，所以内部颜色和顶点颜色相等
                     set_pixel({x, y, 0.f}, color);
                 }
