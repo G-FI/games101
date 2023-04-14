@@ -86,6 +86,7 @@ std::optional<hit_payload> trace(
 {
     float tNear = kInfinity;
     std::optional<hit_payload> payload;
+    //对于常见中的所有物体进行判断
     for (const auto & object : objects)
     {
         float tNearK = kInfinity;

@@ -17,5 +17,50 @@
             }
         }
         ```
-2. TODO
+2. 三角形求交:
    三角形求交，moller公式![moller](resource/2.png)
+   作业中使用 u,v来表示b1,b2
+
+3. 关于反射和折射的代码:(其中的所有传入光线的方向都是物理意义上正确的方向, 比如入射到p点的方向就是从发出点到p点,而不是反过来的方向)
+    ![fresnel](resource/3.png)
+   1. 反射
+    ```C++
+    case REFLECTION:
+        {
+            //通过fresnel项来计算出光线在这一点的能量有多少发生了反射,占比为kr,根据能量守恒定律可以计算出折射能量的占比为kt = 1 - kr (transmit)
+            float kr = fresnel(dir, N, payload->hit_obj->ior);
+            Vector3f reflectionDirection = reflect(dir, N);
+            Vector3f reflectionRayOrig = (dotProduct(reflectionDirection, N) < 0) ?
+                                        hitPoint + N * scene.epsilon :
+                                        hitPoint - N * scene.epsilon;
+            hitColor = castRay(reflectionRayOrig, reflectionDirection, scene, depth + 1) * kr;
+            break;
+        }
+    ```
+    2. fresnel
+    ```C++
+    // I incident view direction
+    float fresnel(const Vector3f &I, const Vector3f &N, const float &ior)
+    {
+        float cosi = clamp(-1, 1, dotProduct(I, N));
+        float etai = 1, etat = ior;             
+        if (cosi > 0) {  std::swap(etai, etat); }
+        // Compute sini using Snell's law
+        float sint = etai / etat * sqrtf(std::max(0.f, 1 - cosi * cosi));
+        // Total internal reflection
+        if (sint >= 1) {
+            return 1;
+        }
+        else {
+            float cost = sqrtf(std::max(0.f, 1 - sint * sint));
+            cosi = fabsf(cosi);
+            float Rs = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
+            float Rp = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost) );
+            
+            return (Rs * Rs + Rp * Rp) / 2;
+        }
+        // As a consequence of the conservation of energy, transmittance is given by:
+        // kt = 1 - kr;
+    }
+    ```
+    3. 折射项与反射相似

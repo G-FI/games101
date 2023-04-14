@@ -31,35 +31,36 @@ bool rayTriangleIntersect(const Vector3f& v0, const Vector3f& v1, const Vector3f
     // origin is *orig* and direction is *dir*)
     // Also don't forget to update tnear, u and v.
 
-    // auto n  = crossProduct(v1 - v0, v2 - v0);
-
-    // //平行
-    // if(dotProduct(n, dir) == 0.f){
-    //     return false;
-    // }
-
-    // float t = dotProduct(n, v0 - orig) / dotProduct(n, dir);
+    auto n  = crossProduct(v1 - v0, v2 - v0);
+    //平行
+    if(dotProduct(n, dir) == 0.f){
+        return false;
+    }
     
+    float t = dotProduct(n, v0 - orig) / dotProduct(n, dir);
+    //射线不与三角形平面相交
+    if( t < 0){
+        return false;
+    }
+    //计算重心坐标
+    auto[alpha, beta, gamma] = baryCentric3D(v0, v1, v2, orig + t * dir);
+    if(alpha < 0 || beta < 0 || gamma < 0)
+        return false;
+    tnear = t < tnear? t: tnear;
+    //更新u,v 就是与三角形交点的重心坐标中的 beta 和 gamma
+    u = beta;
+    v = gamma;
 
-    // //射线不与三角形平面相交
-    // if( t < 0){
-    //     return false;
-    // }
-    // //计算重心坐标
-    // auto[alpha, beta, gamma] = baryCentric3D(v0, v1, v2, orig + t * dir);
-    // if(alpha < 0 || beta < 0 || gamma < 0)
-    //     return false;
+    return true;
 
-    // tnear = t < tnear? t: tnear;
-    // //TODO 更新uv
-    // u = 
-    auto E1=v1-v0,E2=v2-v0,S=orig-v0,S1=crossProduct(dir,E2),S2=crossProduct(S,E1);
-    tnear=dotProduct(S2,E2)/dotProduct(S1,E1);
-    u=dotProduct(S1,S)/dotProduct(S1,E1);
-    v=dotProduct(S2,dir)/dotProduct(S1,E1);
-    if(tnear>0 && u>=0 && v>=0 && (1.0f-u-v)>=0 )
-        return true;
-    return false;
+    //Moller-Trumbore算法
+    // auto E1=v1-v0,E2=v2-v0,S=orig-v0,S1=crossProduct(dir,E2),S2=crossProduct(S,E1);
+    // tnear=dotProduct(S2,E2)/dotProduct(S1,E1);
+    // u=dotProduct(S1,S)/dotProduct(S1,E1);
+    // v=dotProduct(S2,dir)/dotProduct(S1,E1);
+    // if(tnear>0 && u>=0 && v>=0 && (1.0f-u-v)>=0 )
+    //     return true;
+    // return false;
     
 }
 
